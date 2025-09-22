@@ -508,12 +508,13 @@ function hideVictoryPopup() {
 function showDeathPopup() {
     gamePaused = true;
     deathPopup.innerHTML = `
-  <div style="color:white; font-size:2em; margin-bottom:24px;">You died on floor ${floorNumber} lol</div>
-  <div style="display:flex; gap:20px;">
-    <button id="deathOkBtn" style="font-size:1.2em; padding:10px 40px; border-radius:8px; border:none; background:#f44; color:#fff; cursor:pointer;">Restart</button>
-  </div>
-`;
+      <div style="color:white; font-size:2em; margin-bottom:24px;">You died on Floor ${floorNumber}</div>
+      <div style="display:flex; gap:20px;">
+        <button id="deathOkBtn" style="font-size:1.2em; padding:10px 40px; border-radius:8px; border:none; background:#f44; color:#fff; cursor:pointer;">Restart</button>
+      </div>
+    `;
     deathPopup.style.display = "flex";
+    document.getElementById("deathOkBtn").onclick = hideDeathPopup;
 }
 
 function hideDeathPopup() {
