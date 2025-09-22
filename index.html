@@ -14,146 +14,466 @@ border: 2px solid #fff;
 </head>
 <body>
 <div id="cooldownBox" style="position:absolute; left:10px; top:10px; color:white; background:rgba(0,0,0,0.7); padding:8px 16px; border-radius:8px; font-family:sans-serif; font-size:20px; z-index:10;">
-  <div id="cooldownSmall">Small Sword: READY</div>
-  <div id="cooldownBig">Big Sword: READY</div>
+  <div id="cooldownSmall">Sword: READY</div>
+  <div id="cooldownBig">Staff: READY</div>
 </div>
-<div id="weaponBox0" style="position:absolute; top:10px; right:70px; width:50px; height:50px; background:#0f0; border-radius:8px; z-index:10;"></div>
-<div id="weaponBox1" style="position:absolute; top:10px; right:10px; width:50px; height:50px; background:#ff0; border-radius:8px; z-index:10;"></div>
+<div id="weaponBox0" style="position:absolute; top:10px; right:70px; width:50px; height:50px; background:#0f0; border-radius:8px; z-index:10; display:flex; align-items:center; justify-content:center;">
+  <img id="smallSwordImg" src="weapons.png" alt="Small Sword" style="width:48px; height:48px;">
+</div>
+<div id="weaponBox1" style="position:absolute; top:10px; right:10px; width:50px; height:50px; background:#ff0; border-radius:8px; z-index:10; display:flex; align-items:center; justify-content:center;">
+  <img id="bigSwordImg" src="magicstaff.png" alt="Big Sword" style="width:48px; height:48px;">
+</div>
+<div id="weaponSelectMenu" style="position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+  <div style="color:white; font-size:2em; margin-bottom:24px;">Select Your Weapons</div>
+  <div style="display:flex; gap:40px; margin-bottom:32px;">
+    <div id="selectSmallSword" style="width:100px; height:100px; background:#222; border:4px solid #fff; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer;">
+      <img src="weapons.png" alt="Sword" style="width:48px; height:48px;">
+      <span style="color:white; margin-top:8px;">Sword</span>
+    </div>
+    <div id="selectBigSword" style="width:100px; height:100px; background:#222; border:4px solid #fff; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer;">
+      <img src="magicstaff.png" alt="Staff" style="width:64px; height:64px;">
+      <span style="color:white; margin-top:8px;">Staff</span>
+    </div>
+  </div>
+  <button id="weaponSelectOk" style="font-size:1.2em; padding:10px 40px; border-radius:8px; border:none; background:#0f0; color:#222; cursor:pointer;" disabled>OK</button>
+</div>
 <canvas id="gameCanvas" width="800" height="500"></canvas>
+<div id="instructions" style="position:fixed; left:0; bottom:0; width:100vw; color:#fff; background:rgba(0,0,0,0.8); font-family:sans-serif; font-size:18px; text-align:center; padding:10px 0; z-index:20;">
+    Move: <b>WASD</b> &nbsp;|&nbsp; Attack: <b>Mouse Click</b> &nbsp;|&nbsp; Aim: <b>Mouse</b> &nbsp;|&nbsp; Switch Weapons: <b>1&2</b>
+</div>
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const keys = {};
 const gravity = 0.7;
+let selectedWeapons = [];
+const menu = document.getElementById("weaponSelectMenu");
+const smallSwordDiv = document.getElementById("selectSmallSword");
+const bigSwordDiv = document.getElementById("selectBigSword");
+const okBtn = document.getElementById("weaponSelectOk"); 
+const platforms = [
+ 
+    { x: 160, y: 350, w: 170, h: 20 },
+    { x: 500, y: 270, w: 150, h: 20 },
+    { x: 300, y: 180, w: 200, h: 20 }
+];
 
 class Player {
-constructor() {
-    this.x = 100;
-    this.y = 400;
-    this.w = 40;
-    this.h = 60;
-    this.vx = 0;
-    this.vy = 0;
-    this.speed = 5;
-    this.onGround = false;
-    this.attacking = false;
-    this.weapons = [
-        { swordW: 500, swordH: 50, maxCooldown: 300, cooldown: 0 },
-        { swordW: 50, swordH: 15, maxCooldown: 30, cooldown: 0 }
-    ];
-    this.selectedWeapon = 1;
-}
-get swordW() { return this.weapons[this.selectedWeapon].swordW; }
-get swordH() { return this.weapons[this.selectedWeapon].swordH; }
-get maxCooldown() { return this.weapons[this.selectedWeapon].maxCooldown; }
-get attackCooldown() { return this.weapons[this.selectedWeapon].cooldown; }
-set attackCooldown(val) { this.weapons[this.selectedWeapon].cooldown = val; }
 
-update() {
-    if (keys["a"]) this.vx = -this.speed;
-    else if (keys["d"]) this.vx = this.speed;
-    else this.vx = 0;
-
-    if (keys["w"] && this.onGround) {
-        this.vy = -15;
+    constructor() {
+        this.x = 100;
+        this.y = 400;
+        this.w = 40;
+        this.h = 60;
+        this.vx = 0;
+        this.vy = 0;
+        this.speed = 5;
         this.onGround = false;
+        this.attacking = false;
+        this.weapons = [
+            { swordW: 500, swordH: 50, maxCooldown: 300, cooldown: 0 },
+            { swordW: 50, swordH: 15, maxCooldown: 30, cooldown: 0 }
+        ];
+        this.selectedWeapon = 1;
     }
+    get swordW() { return this.weapons[this.selectedWeapon].swordW; }
+    get swordH() { return this.weapons[this.selectedWeapon].swordH; }
+    get maxCooldown() { return this.weapons[this.selectedWeapon].maxCooldown; }
+    get attackCooldown() { return this.weapons[this.selectedWeapon].cooldown; }
+    set attackCooldown(val) { this.weapons[this.selectedWeapon].cooldown = val; }
 
-    this.vy += gravity;
-    this.y += this.vy;
-    this.x += this.vx;
+    update() {
+        if (keys["a"]) this.vx = -this.speed;
+        else if (keys["d"]) this.vx = this.speed;
+        else this.vx = 0;
 
-    this.onGround = false;
-    for (const p of platforms) {
-        if (
-            this.vy >= 0 &&
-            this.x + this.w > p.x &&
-            this.x < p.x + p.w &&
-            this.y + this.h <= p.y + this.vy &&
-            this.y + this.h + this.vy >= p.y
-        ) {
-            this.y = p.y - this.h;
+        if (keys["w"] && this.onGround) {
+            this.vy = -15;
+            this.onGround = false;
+        }
+
+        this.vy += gravity;
+        this.y += this.vy;
+        this.x += this.vx;
+
+        this.onGround = false;
+        for (const p of platforms) {
+            if (
+                this.vy >= 0 &&
+                this.x + this.w > p.x &&
+                this.x < p.x + p.w &&
+                this.y + this.h <= p.y + this.vy &&
+                this.y + this.h + this.vy >= p.y
+            ) {
+                this.y = p.y - this.h;
+                this.vy = 0;
+                this.onGround = true;
+            }
+        }
+
+        if (this.y + this.h >= canvas.height) {
+            this.y = canvas.height - this.h;
             this.vy = 0;
             this.onGround = true;
         }
+
+        if (this.x < 0) this.x = 0;
+        if (this.x + this.w > canvas.width) this.x = canvas.width - this.w;
+
+        for (let weapon of this.weapons) {
+            if (weapon.cooldown > 0) weapon.cooldown--;
+        }
+
+
+        if (this.attacking && this.attackCooldown === 0) {
+            this.attackCooldown = this.maxCooldown;
+            const cx = this.x + this.w / 2;
+            const cy = this.y + this.h / 2;
+            const dx = mouse.x - cx;
+            const dy = mouse.y - cy;
+            const angle = Math.atan2(dy, dx);
+            weaponAnimations.push(
+                new WeaponAnimation(cx, cy, angle, this.selectedWeapon)
+            );
+        }
     }
+    draw() {
+        ctx.fillStyle = "#4af";
+        ctx.fillRect(this.x, this.y, this.w, this.h);
 
-    if (this.y + this.h >= canvas.height) {
-        this.y = canvas.height - this.h;
-        this.vy = 0;
-        this.onGround = true;
     }
-
-    if (this.x < 0) this.x = 0;
-    if (this.x + this.w > canvas.width) this.x = canvas.width - this.w;
-
-    for (let weapon of this.weapons) {
-        if (weapon.cooldown > 0) weapon.cooldown--;
-    }
-
-    if (this.attacking && this.attackCooldown === 0) {
-        this.attackCooldown = this.maxCooldown;
-    }
-}
-draw() {
-    ctx.fillStyle = "#4af";
-    ctx.fillRect(this.x, this.y, this.w, this.h);
-
-    if (this.attacking && this.attackCooldown > this.maxCooldown - 10) {
-        const cx = this.x + this.w / 2;
-        const cy = this.y + this.h / 2;
-        const dx = mouse.x - cx;
-        const dy = mouse.y - cy;
-        const angle = Math.atan2(dy, dx);
-
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(angle);
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, -this.swordH / 2, this.swordW, this.swordH);
-        ctx.restore();
-    }
-}
 }
 
 class Enemy {
-constructor(x, y) {
-this.x = x;
-this.y = y;
-this.w = 40;
-this.h = 40;
-this.speed = 2;
+    constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.w = 40;
+    this.h = 40;
+    this.speed = 2;
+    }
+    update(player) {
+    if (player.x > this.x) this.x += this.speed;
+    else if (player.x < this.x) this.x -= this.speed;
+    if (player.y > this.y) this.y += this.speed;
+    else if (player.y < this.y) this.y -= this.speed;
+    }
+    draw() {
+    ctx.fillStyle = "#f44";
+    ctx.fillRect(this.x, this.y, this.w, this.h);
+    }
 }
-update(player) {
-if (player.x > this.x) this.x += this.speed;
-else if (player.x < this.x) this.x -= this.speed;
-if (player.y > this.y) this.y += this.speed;
-else if (player.y < this.y) this.y -= this.speed;
-}
-draw() {
-ctx.fillStyle = "#f44";
-ctx.fillRect(this.x, this.y, this.w, this.h);
-}
+
+class WeaponAnimation {
+    constructor(x, y, angle, weaponType) {
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        const weapon = player.weapons[weaponType];
+        this.w = weapon.swordW;
+        this.h = weapon.swordH;
+        this.duration = weaponType === 0 ? 16 : 10;
+        this.timer = 0;
+        this.weaponType = weaponType;
+        this.fillColor = weaponType === 0 ? "orange" : "gray";
+    }
+    update() {
+        this.timer++;
+    }
+    isActive() {
+        return this.timer < this.duration;
+    }
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = this.fillColor;
+        ctx.globalAlpha = 1 - this.timer / this.duration;
+        ctx.fillRect(0, -this.h / 2, this.w, this.h);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+    }
+    getRect() {
+        const cos = Math.cos(this.angle);
+        const sin = Math.sin(this.angle);
+        const points = [
+            { x: 0, y: -this.h / 2 },
+            { x: this.w, y: -this.h / 2 },
+            { x: this.w, y: this.h / 2 },
+            { x: 0, y: this.h / 2 }
+        ].map(p => ({
+            x: this.x + p.x * cos - p.y * sin,
+            y: this.y + p.x * sin + p.y * cos
+        }));
+        const xs = points.map(p => p.x);
+        const ys = points.map(p => p.y);
+        return {
+            x: Math.min(...xs),
+            y: Math.min(...ys),
+            w: Math.max(...xs) - Math.min(...xs),
+            h: Math.max(...ys) - Math.min(...ys)
+        };
+    }
+
+    touchingenemy(ex, ey, ew = 40, eh = 40) {
+        const corners = [
+            { x: ex, y: ey },
+            { x: ex + ew, y: ey },
+            { x: ex, y: ey + eh },
+            { x: ex + ew, y: ey + eh }
+        ];
+        const cos = Math.cos(-this.angle);
+        const sin = Math.sin(-this.angle);
+
+        for (const corner of corners) {
+            const dx = corner.x - this.x;
+            const dy = corner.y - this.y;
+            const localX = dx * cos - dy * sin;
+            const localY = dx * sin + dy * cos;
+            if (
+                localX >= 0 &&
+                localX <= this.w &&
+                localY >= -this.h / 2 &&
+                localY <= this.h / 2
+            ) {
+                return true;
+            }
+        }
+
+
+        const weaponCorners = [
+            { x: 0, y: -this.h / 2 },
+            { x: this.w, y: -this.h / 2 },
+            { x: this.w, y: this.h / 2 },
+            { x: 0, y: this.h / 2 }
+        ].map(p => ({
+            x: this.x + p.x * Math.cos(this.angle) - p.y * Math.sin(this.angle),
+            y: this.y + p.x * Math.sin(this.angle) + p.y * Math.cos(this.angle)
+        }));
+        for (const wc of weaponCorners) {
+            if (
+                wc.x >= ex &&
+                wc.x <= ex + ew &&
+                wc.y >= ey &&
+                wc.y <= ey + eh
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 let player = new Player();
 let enemies = [new Enemy(600, 400)];
+let weaponAnimations = [];
 
-function spawnEnemy() {
-let side = Math.random() < 0.5 ? 0 : canvas.width - 40;
-enemies.push(new Enemy(side, 400));
-}
-setInterval(spawnEnemy, 3000);
+let floorNumber = 1;
+let enemiesRemaining = 3; 
+let spawnIntervalId = null;
+
+const counterBox = document.createElement("div");
+counterBox.id = "counterBox";
+counterBox.style.position = "absolute";
+counterBox.style.left = "50%";
+counterBox.style.top = "10px";
+counterBox.style.transform = "translateX(-50%)";
+counterBox.style.color = "white";
+counterBox.style.background = "rgba(0,0,0,0.7)";
+counterBox.style.padding = "8px 16px";
+counterBox.style.borderRadius = "8px";
+counterBox.style.fontFamily = "sans-serif";
+counterBox.style.fontSize = "20px";
+counterBox.style.zIndex = "10";
+document.body.appendChild(counterBox);
 
 function updateCooldownBox() {
-    const big = document.getElementById("cooldownBig");
-    const small = document.getElementById("cooldownSmall");
-    const bigCd = player.weapons[0].cooldown;
-    const smallCd = player.weapons[1].cooldown;
-    big.textContent = "Big Sword: " + (bigCd > 0 ? bigCd : "READY");
-    small.textContent = "Small Sword: " + (smallCd > 0 ? smallCd : "READY");
+    const cooldownSmall = document.getElementById("cooldownSmall");
+    const cooldownBig = document.getElementById("cooldownBig");
+    const sword = player.weapons[1];
+    const staff = player.weapons[0];
+
+    cooldownSmall.textContent =
+        sword.cooldown > 0
+            ? `Sword: ${sword.cooldown}`
+            : "Sword: READY";
+    cooldownBig.textContent =
+        staff.cooldown > 0
+            ? `Staff: ${staff.cooldown}`
+            : "Staff: READY";
 }
+
+function updateCounterBox() {
+    counterBox.textContent = `Floor Number: ${floorNumber} | Enemies Remaining: ${enemiesRemaining}`;
+}
+
+function spawnEnemy() {
+    if (enemiesRemaining > enemies.length) {
+        let side = Math.random() < 0.5 ? 0 : canvas.width - 40;
+        enemies.push(new Enemy(side, 400));
+    }
+}
+
+function startSpawningEnemies() {
+    if (spawnIntervalId) clearInterval(spawnIntervalId);
+    if (enemiesRemaining > 0) {
+        spawnIntervalId = setInterval(() => {
+            if (enemiesRemaining > 0) spawnEnemy();
+        }, 3000);
+    }
+}
+
+function gameLoop() {
+    if (!gameStarted || gamePaused) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawPlatforms();
+
+    player.update();
+    player.draw();
+
+    for (let i = weaponAnimations.length - 1; i >= 0; i--) {
+        let wa = weaponAnimations[i];
+        wa.update();
+        wa.draw(ctx);
+        if (!wa.isActive()) weaponAnimations.splice(i, 1);
+    }
+
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let e = enemies[i];
+        e.update(player);
+        e.draw();
+
+        for (let wa of weaponAnimations) {
+            if (wa.touchingenemy(e.x, e.y, e.w, e.h)) {
+                enemies.splice(i, 1);
+                enemiesRemaining--;
+                updateCounterBox();
+                if (enemiesRemaining <= 0 && spawnIntervalId) {
+                    clearInterval(spawnIntervalId);
+                    spawnIntervalId = null;
+                    setTimeout(showVictoryPopup, 1000);
+                }
+                break;
+            }
+        }
+    }
+
+    updateCooldownBox();
+    updateCounterBox();
+
+    requestAnimationFrame(gameLoop);
+}
+
+
+okBtn.onclick = function() {
+
+    const staff = { swordW: 500, swordH: 50, maxCooldown: 300, cooldown: 0 };
+    const sword = { swordW: 50, swordH: 15, maxCooldown: 30, cooldown: 0 };
+    player.weapons = [staff, sword];
+    player.selectedWeapon = 1; 
+    updateWeaponBoxes();
+    menu.style.display = "none";
+    floorNumber = 1;
+    enemiesRemaining = 3;
+    enemies = [new Enemy(600, 400)];
+    updateCounterBox();
+    startSpawningEnemies();
+    gameStarted = true;
+    requestAnimationFrame(gameLoop);
+};
+
+function updateWeaponBoxes() {
+    const box0 = document.getElementById("weaponBox0");
+    const box1 = document.getElementById("weaponBox1");
+    const smallSwordImg = document.getElementById("smallSwordImg");
+    const bigSwordImg = document.getElementById("bigSwordImg");
+
+    if (player.selectedWeapon === 1) {
+        box0.style.background = "#0f0";
+        box1.style.background = "#ff0";
+    } else {
+        box0.style.background = "#ff0";
+        box1.style.background = "#0f0";
+    }
+
+    smallSwordImg.src = "weapons.png";
+    smallSwordImg.alt = "Sword";
+    smallSwordImg.style.width = "48px";
+    smallSwordImg.style.height = "48px";
+
+    bigSwordImg.src = "magicstaff.png";
+    bigSwordImg.alt = "Staff";
+    bigSwordImg.style.width = "48px";
+    bigSwordImg.style.height = "48px";
+}
+
+function updateMenuSelection() {
+    smallSwordDiv.style.borderColor = selectedWeapons.includes(1) ? "#0f0" : "#fff";
+    bigSwordDiv.style.borderColor = selectedWeapons.includes(0) ? "#0f0" : "#fff";
+    okBtn.disabled = selectedWeapons.length !== 2;
+}
+
+smallSwordDiv.onclick = function() {
+    console.log("hello");
+    if (!selectedWeapons.includes(1)) {
+        selectedWeapons.push(1);
+        updateMenuSelection();
+    }
+}
+bigSwordDiv.onclick = function() {
+    if (!selectedWeapons.includes(0)) {
+        selectedWeapons.push(0);
+        updateMenuSelection();
+    }
+}
+
+const victoryPopup = document.createElement("div");
+victoryPopup.id = "victoryPopup";
+victoryPopup.style.position = "fixed";
+victoryPopup.style.left = "0";
+victoryPopup.style.top = "0";
+victoryPopup.style.width = "100vw";
+victoryPopup.style.height = "100vh";
+victoryPopup.style.background = "rgba(0,0,0,0.85)";
+victoryPopup.style.zIndex = "200";
+victoryPopup.style.display = "none";
+victoryPopup.style.flexDirection = "column";
+victoryPopup.style.alignItems = "center";
+victoryPopup.style.justifyContent = "center";
+victoryPopup.innerHTML = `
+  <div style="color:white; font-size:2em; margin-bottom:24px;">Choose an upgrade (I didn't add this part)</div>
+  <div style="display:flex; gap:20px;">
+    <button id="victoryOkBtn" style="font-size:1.2em; padding:10px 40px; border-radius:8px; border:none; background:#0f0; color:#222; cursor:pointer;">Nothing</button>
+    <button id="victoryOkBtn2" style="font-size:1.2em; padding:10px 40px; border-radius:8px; border:none; background:#0f0; color:#222; cursor:pointer;">Nothing</button>
+  </div>
+`;
+document.body.appendChild(victoryPopup);
+
+let gamePaused = false;
+
+function showVictoryPopup() {
+    gamePaused = true;
+    victoryPopup.style.display = "flex";
+}
+
+function hideVictoryPopup() {
+    victoryPopup.style.display = "none";
+    gamePaused = false;
+    floorNumber += 1;
+    enemiesRemaining = floorNumber * 2 + 1;
+    enemies = [new Enemy(600, 400)];
+    updateCounterBox();
+    startSpawningEnemies();
+    requestAnimationFrame(gameLoop);
+}
+
+document.getElementById("victoryOkBtn").onclick = hideVictoryPopup;
+document.getElementById("victoryOkBtn2").onclick = hideVictoryPopup;
+
 
 function drawPlatforms() {
     ctx.fillStyle = "#888";
@@ -162,104 +482,45 @@ function drawPlatforms() {
     }
 }
 
-function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    drawPlatforms();
-
-    player.update();
-    player.draw();
-
-    for (let i = enemies.length - 1; i >= 0; i--) {
-        let e = enemies[i];
-        e.update(player);
-        e.draw();
-
-        if (player.attacking && player.attackCooldown > player.maxCooldown - 10) {
-            const cx = player.x + player.w / 2;
-            const cy = player.y + player.h / 2;
-            const dx = mouse.x - cx;
-            const dy = mouse.y - cy;
-            const angle = Math.atan2(dy, dx);
-
-            const swordRect = {
-                x: cx + Math.cos(angle) * player.swordW / 2 - player.swordW / 2,
-                y: cy + Math.sin(angle) * player.swordW / 2 - player.swordH / 2,
-                w: player.swordW,
-                h: player.swordH
-            };
-
-            if (rectCollision(swordRect, e) && player.attackCooldown > player.maxCooldown - 10) {
-                enemies.splice(i, 1);
-                continue;
-            }
-        }
+document.addEventListener("keydown", e => {
+    keys[e.key.toLowerCase()] = true;
+    if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
     }
+});
+document.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
 
-    updateCooldownBox();
-
-    requestAnimationFrame(gameLoop);
-}
-
-function rectCollision(r1, r2) {
-return (
-r1.x < r2.x + r2.w &&
-r1.x + r1.w > r2.x &&
-r1.y < r2.y + r2.h &&
-r1.y + r1.h > r2.y
-);
-}
-
-document.addEventListener("keydown", (e) => {
-    keys[e.key] = true;
-    if (e.key === "1") {
-        player.selectedWeapon = 1;
-        updateWeaponBoxes();
+let mouse = { x: 0, y: 0 };
+canvas.addEventListener("mousedown", () => {
+    player.attacking = true;
+});
+canvas.addEventListener("mouseup", () => {
+    player.attacking = false;
+});
+canvas.addEventListener("mousemove", e => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+});
+document.addEventListener("keydown", e => {
+    keys[e.key.toLowerCase()] = true;
+    if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
     }
     if (e.key === "2") {
         player.selectedWeapon = 0;
         updateWeaponBoxes();
     }
-});
-document.addEventListener("keyup", (e) => {
-    keys[e.key] = false;
-});
-
-let mouse = { x: 0, y: 0 };
-canvas.addEventListener("mousemove", (e) => {
-const rect = canvas.getBoundingClientRect();
-mouse.x = e.clientX - rect.left;
-mouse.y = e.clientY - rect.top;
-});
-
-canvas.addEventListener("mousedown", () => {
-player.attacking = true;
-});
-canvas.addEventListener("mouseup", () => {
-player.attacking = false;
-});
-
-function updateWeaponBoxes() {
-    const box0 = document.getElementById("weaponBox0");
-    const box1 = document.getElementById("weaponBox1");
-    if (player.selectedWeapon === 1) {
-        box0.style.background = "#0f0";
-        box1.style.background = "#ff0";
-    } else {
-        box0.style.background = "#ff0";
-        box1.style.background = "#0f0";
+    if (e.key === "1") {
+        player.selectedWeapon = 1;
+        updateWeaponBoxes();
     }
-}
-
-updateWeaponBoxes();
-
-const platforms = [
-    { x: 150, y: 350, w: 200, h: 20 },
-    { x: 450, y: 250, w: 180, h: 20 },
-    { x: 300, y: 150, w: 120, h: 20 }
-];
-
-requestAnimationFrame(gameLoop);
+});
+document.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
 </script>
 </body>
 </html>
