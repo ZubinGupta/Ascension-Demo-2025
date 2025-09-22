@@ -38,7 +38,7 @@ border: 2px solid #fff;
   <button id="weaponSelectOk" style="font-size:1.2em; padding:10px 40px; border-radius:8px; border:none; background:#0f0; color:#222; cursor:pointer;" disabled>OK</button>
 </div>
 <canvas id="gameCanvas" width="800" height="500"></canvas>
-<div id="instructions" style="position:fixed; left:0; bottom:0; width:100vw; color:#fff; background:rgba(0,0,0,0.8); font-family:sans-serif; font-size:18px; text-align:center; padding:10px 0; z-index:20;">
+<div id="instructions" style="width:800px; margin:0 auto; color:#fff; background:rgba(0,0,0,0.8); font-family:sans-serif; font-size:18px; text-align:center; padding:10px 0; z-index:20;">
     Move: <b>WASD</b> &nbsp;|&nbsp; Attack: <b>Mouse Click</b> &nbsp;|&nbsp; Aim: <b>Mouse</b> &nbsp;|&nbsp; Switch Weapons: <b>1&2</b>
 </div>
 <script>
@@ -73,7 +73,7 @@ class Player {
         this.attacking = false;
         this.weapons = [
             { swordW: 500, swordH: 50, maxCooldown: 300, cooldown: 0 },
-            { swordW: 50, swordH: 15, maxCooldown: 30, cooldown: 0 }
+            { swordW: 70, swordH: 15, maxCooldown: 30, cooldown: 0 }
         ];
         this.selectedWeapon = 1;
     }
@@ -345,6 +345,19 @@ function gameLoop() {
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i];
         e.update(player);
+
+        if (
+            player.x < e.x + e.w &&
+            player.x + player.w > e.x &&
+            player.y < e.y + e.h &&
+            player.y + player.h > e.y
+        ) {
+            if (!gamePaused) {
+                showDeathPopup();
+            }
+            return; 
+        }
+
         e.draw();
 
         for (let wa of weaponAnimations) {
@@ -453,6 +466,27 @@ victoryPopup.innerHTML = `
 `;
 document.body.appendChild(victoryPopup);
 
+const deathPopup = document.createElement("div");
+deathPopup.id = "deathPopup";
+deathPopup.style.position = "fixed";
+deathPopup.style.left = "0";
+deathPopup.style.top = "0";
+deathPopup.style.width = "100vw";
+deathPopup.style.height = "100vh";
+deathPopup.style.background = "rgba(0,0,0,0.85)";
+deathPopup.style.zIndex = "201";
+deathPopup.style.display = "none";
+deathPopup.style.flexDirection = "column";
+deathPopup.style.alignItems = "center";
+deathPopup.style.justifyContent = "center";
+deathPopup.innerHTML = `
+  <div style="color:white; font-size:2em; margin-bottom:24px;">You died on floor ${floorNumber}</div>
+  <div style="display:flex; gap:20px;">
+    <button id="deathOkBtn" style="font-size:1.2em; padding:10px 40px; border-radius:8px; border:none; background:#f44; color:#fff; cursor:pointer;">Restart</button>
+  </div>
+`;
+document.body.appendChild(deathPopup);
+
 let gamePaused = false;
 
 function showVictoryPopup() {
@@ -471,8 +505,36 @@ function hideVictoryPopup() {
     requestAnimationFrame(gameLoop);
 }
 
+function showDeathPopup() {
+    gamePaused = true;
+    deathPopup.innerHTML = `
+  <div style="color:white; font-size:2em; margin-bottom:24px;">You died on floor ${floorNumber} lol</div>
+  <div style="display:flex; gap:20px;">
+    <button id="deathOkBtn" style="font-size:1.2em; padding:10px 40px; border-radius:8px; border:none; background:#f44; color:#fff; cursor:pointer;">Restart</button>
+  </div>
+`;
+    deathPopup.style.display = "flex";
+}
+
+function hideDeathPopup() {
+    deathPopup.style.display = "none";
+    gamePaused = false;
+    floorNumber = 1;
+    enemiesRemaining = 3;
+    player.x = 100;
+    player.y = 400;
+    player.vx = 0;
+    player.vy = 0;
+    enemies = [new Enemy(600, 400)];
+    weaponAnimations = [];
+    updateCounterBox();
+    startSpawningEnemies();
+    requestAnimationFrame(gameLoop);
+}
+
 document.getElementById("victoryOkBtn").onclick = hideVictoryPopup;
 document.getElementById("victoryOkBtn2").onclick = hideVictoryPopup;
+document.getElementById("deathOkBtn").onclick = hideDeathPopup;
 
 
 function drawPlatforms() {
